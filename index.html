@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DataFlow NG (DEMO)</title>
+<style>
+:root{--bg:#f5f7f6;--card:#fff;--tx:#14221b;--mu:#5d6b64;--bd:#dfe6e2;--pr:#0a8f4e;--pr2:#e4f5ec;--wa:#b45309;--er:#c62828;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1713;--card:#18231d;--tx:#eaf2ed;--mu:#9db0a5;--bd:#27362e;--pr:#2fc57a;--pr2:#14301f;--wa:#f6b04c;--er:#ef7373}}
+:root[data-theme="dark"]{--bg:#0f1713;--card:#18231d;--tx:#eaf2ed;--mu:#9db0a5;--bd:#27362e;--pr:#2fc57a;--pr2:#14301f;--wa:#f6b04c;--er:#ef7373}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.demo{background:var(--wa);color:#fff;text-align:center;font-size:12px;font-weight:700;padding:5px}
+header{background:var(--card);border-bottom:1px solid var(--bd);position:sticky;top:env(safe-area-inset-top,0px);z-index:5}
+.logo{font-weight:800;font-size:20px;padding:10px 14px 4px}.logo b{color:var(--pr)}
+nav{display:flex;gap:4px;overflow-x:auto;padding:0 10px 8px}nav a{white-space:nowrap;padding:7px 12px;border-radius:99px;color:var(--mu);text-decoration:none;font-size:14px;font-weight:600}nav a.on{background:var(--pr2);color:var(--pr)}
+main{max-width:640px;margin:0 auto;padding:14px}
+h1{font-size:24px;margin:6px 0}h2{font-size:18px;margin:16px 0 8px}p{color:var(--mu);margin:6px 0}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;margin:10px 0}
+.btn{display:block;width:100%;border:0;border-radius:12px;padding:15px;font-size:16px;font-weight:800;background:var(--pr);color:#fff;cursor:pointer;margin:10px 0;text-align:center;text-decoration:none}
+.btn.alt{background:var(--card);color:var(--tx);border:1px solid var(--bd)}.btn.bad{background:var(--card);color:var(--er);border:1px solid var(--er)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.net{border:2px solid var(--bd);background:var(--card);color:var(--tx);border-radius:14px;padding:16px 8px;font-weight:800;font-size:17px;cursor:pointer}.net.on{border-color:var(--pr);background:var(--pr2)}
+.net i{display:block;width:14px;height:14px;border-radius:50%;margin:0 auto 6px}
+.plan{border:2px solid var(--bd);background:var(--card);color:var(--tx);border-radius:14px;padding:14px 8px;cursor:pointer;font-size:20px;font-weight:800}.plan small{display:block;font-size:14px;color:var(--pr);font-weight:700}.plan.on{border-color:var(--pr);background:var(--pr2)}
+label{font-weight:700;font-size:14px;display:block;margin-top:12px}input{width:100%;padding:14px;font-size:16px;border:1px solid var(--bd);border-radius:12px;background:var(--bg);color:var(--tx);margin-top:4px}
+.err{color:var(--er);font-weight:600;margin:8px 0}.row{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--bd)}.row:last-child{border:0}.row span{color:var(--mu)}.row b{text-align:right;word-break:break-word}
+.tag{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:700;background:var(--pr2);color:var(--pr)}.tag.w{background:#fdf0dc;color:var(--wa)}.tag.e{background:#fde4e4;color:var(--er)}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}.stat{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:12px}.stat b{font-size:26px;display:block}
+.wrap{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:13px;min-width:760px}td,th{padding:8px;border-bottom:1px solid var(--bd);text-align:left;white-space:nowrap}
+pre{background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:10px;font-size:12px;overflow-x:auto;white-space:pre-wrap}
+.steps{display:flex;gap:6px;margin:8px 0}.steps div{flex:1;height:5px;border-radius:9px;background:var(--bd)}.steps .on{background:var(--pr)}
+.big{font-size:42px;text-align:center}
+</style></head><body>
+<div class="demo">⚠ TEST MODE — Paystack test payments only, no real money. Data delivery is still simulated.</div>
+<header><div class="logo">Data<b>Flow</b> NG</div><nav id="nav"></nav></header>
+<main id="app"></main>
+<script src="https://js.paystack.co/v2/inline.js"></script>
+<script>
+/* ============ 1. CONFIG — edit prices & settings here ============ */
+const CONFIG={demo:true,
+ // Future: real n8n webhook. Never put API keys here; keep them in server env vars.
+ n8nWebhookUrl:"/api/n8n-webhook"};
+const NETWORKS={MTN:"#f5b800",Airtel:"#e4002b",Glo:"#2e9e41","9mobile":"#0a6b3d"};
+const PLAN_SIZES=["500MB","1GB","2GB","3GB","5GB","10GB"];
+const PRICES={ // DEMO prices in Naira — change freely
+ MTN:{"500MB":140,"1GB":270,"2GB":540,"3GB":810,"5GB":1350,"10GB":2700},
+ Airtel:{"500MB":135,"1GB":265,"2GB":530,"3GB":795,"5GB":1325,"10GB":2650},
+ Glo:{"500MB":130,"1GB":255,"2GB":510,"3GB":765,"5GB":1275,"10GB":2550},
+ "9mobile":{"500MB":125,"1GB":250,"2GB":500,"3GB":750,"5GB":1250,"10GB":2500}};
+
+/* ============ 2. DATA STORE (mock DB: localStorage, falls back to memory) ============ */
+let mem=[];
+const DB={
+ all(){let l;try{l=JSON.parse(localStorage.getItem("dfng_orders")||"[]")}catch(e){l=mem}
+  return l.map(o=>({...o,payment_status:o.payment_status,data_delivery_status:o.data_delivery_status==="Delivered"?"Sent (Demo)":o.data_delivery_status}))},
+ save(list){mem=list;try{localStorage.setItem("dfng_orders",JSON.stringify(list))}catch(e){}},
+ get(id){return this.all().find(o=>o.order_id===id)},
+ upsert(o){const l=this.all(),i=l.findIndex(x=>x.order_id===o.order_id);i<0?l.unshift(o):l[i]=o;this.save(l)}
+};
+// Order shape: order_id, customer_name, phone_number, network, data_plan, amount,
+// payment_status (Pending|Paid (Demo)|Failed), data_delivery_status (Not sent|Pending|Sent (Demo)|Failed), created_at, log[]
+
+/* ============ 3. MOCK SERVICES (replace later with real server calls) ============ */
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const mockVtu=async o=>{await sleep(1200);return{status:"success",reference:"MOCKVTU-"+Math.random().toString(36).slice(2,8).toUpperCase(),message:"Mock data delivered (nothing real was bought)"}};
+// Mimics: DataFlow -> n8n webhook -> verify payment -> save -> VTU -> update
+async function mockN8nWorkflow(o){
+ o.log=["1. Webhook received at "+CONFIG.n8nWebhookUrl+" (MOCK)"];
+ await sleep(400);o.log.push("2. Payment verified by Paystack (server-side): "+o.payment_status);
+ o.log.push("3. Order saved: "+o.order_id);
+ o.log.push("4. Sent to VTU API (MOCK)");
+ const r=await mockVtu(o);o.log.push("5. VTU response: "+r.status+" ("+r.reference+")");
+ o.data_delivery_status=r.status==="success"?"Sent (Demo)":"Failed";
+ o.log.push("6. Order updated -> "+o.data_delivery_status);o.log.push("7. Confirmation sent to customer (MOCK)");
+ return o}
+
+/* ============ 4. HELPERS ============ */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const naira=n=>"₦"+Number(n).toLocaleString();
+const when=iso=>new Date(iso).toLocaleString("en-NG",{dateStyle:"medium",timeStyle:"short"});
+const isPaid=s=>s==="Paid"||s==="Paid (Demo)";
+const tag=s=>{const g=["Paid","Paid (Demo)","Sent (Demo)"].includes(s),b=["Failed"].includes(s);return`<span class="tag ${g?"":b?"e":"w"}">${esc(s)}</span>`};
+const validPhone=p=>/^0[789][01]\d{8}$/.test(p);
+let S={net:null,plan:null,name:"",phone:"",step:1,err:"",order:null,busy:false,found:undefined,cfgErr:"",checking:false};
+let PK=null;
+async function loadConfig(){try{const r=await fetch("/api/config",{cache:"no-store"});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||"Could not load payment settings.");PK=j.publicKey;S.cfgErr=""}catch(e){PK=null;S.cfgErr=e.message==="Failed to fetch"?"Could not reach the server to load payment settings.":e.message}render()}
+const refCode=()=>Math.random().toString(36).slice(2,7).toUpperCase().padEnd(5,"X");
+const go=h=>{location.hash=h;window.scrollTo(0,0)};
+const netBtns=()=>`<div class="grid">${Object.keys(NETWORKS).map(n=>`<button class="net ${S.net===n?"on":""}" onclick="pickNet('${n}')"><i style="background:${NETWORKS[n]}"></i>${n}</button>`).join("")}</div>`;
+function pickNet(n){S.net=n;S.plan=null;render()}
+function pickPlan(p){S.plan=p;render()}
+function startOrder(){S.step=1;S.err="";S.order=null;go("#/checkout")}
+
+/* ============ 5. PAGES ============ */
+const pages={
+home:()=>`<h1>Cheap data, delivered fast 🇳🇬</h1><p>Buy MTN, Airtel, Glo and 9mobile data in a few taps. (Demo version)</p>
+<h2>1. Choose network</h2>${netBtns()}
+<button class="btn" onclick="S.net?go('#/plans'):(S.err='Please choose a network first.',render())">BUY DATA</button>${S.err?`<div class="err">${S.err}</div>`:""}
+<a class="btn alt" href="#/history">CHECK ORDER STATUS</a>`,
+plans:()=>`<h1>Data Plans</h1><p>DEMO prices — not real.</p>${netBtns()}
+${S.net?`<h2>${S.net} plans</h2><div class="grid">${PLAN_SIZES.map(p=>`<button class="plan ${S.plan===p?"on":""}" onclick="pickPlan('${p}')">${p}<small>${naira(PRICES[S.net][p])}</small></button>`).join("")}</div>
+<button class="btn" ${S.plan?"":"disabled style='opacity:.5'"} onclick="S.plan&&startOrder()">CONTINUE</button>`:`<p>Select a network to see plans.</p>`}`,
+checkout:()=>{
+ if(!S.net||!S.plan)return`<div class="card">Please choose a network and plan first.</div><a class="btn" href="#/plans">GO TO PLANS</a>`;
+ const amt=PRICES[S.net][S.plan];
+ const bar=`<div class="steps">${[1,2].map(i=>`<div class="${S.step>=i?"on":""}"></div>`).join("")}</div>`;
+ const sum=`<div class="card"><div class="row"><span>Network</span><b>${S.net}</b></div><div class="row"><span>Plan</span><b>${S.plan}</b></div><div class="row"><span>Amount (DEMO)</span><b>${naira(amt)}</b></div></div>`;
+ if(S.step===1)return`<h1>Your details</h1>${bar}${sum}
+ <label>Customer name</label><input id="nm" value="${esc(S.name)}" placeholder="e.g. Chinedu Okafor" autocomplete="name">
+ <label>Phone number to receive data</label><input id="ph" value="${esc(S.phone)}" placeholder="08012345678" inputmode="numeric" maxlength="11" autocomplete="tel">
+ ${S.err?`<div class="err">${S.err}</div>`:""}<button class="btn" onclick="toReview()">REVIEW ORDER</button>`;
+ const det=`<div class="card"><div class="row"><span>Name</span><b>${esc(S.name)}</b></div><div class="row"><span>Phone</span><b>${esc(S.phone)}</b></div></div>`;
+ return`<h1>Review order</h1>${bar}${sum}${det}<div class="card"><span class="tag w">PAYSTACK TEST MODE</span><p>Use Paystack test cards only. No real money is taken. Data delivery is simulated.</p>${S.cfgErr?`<div class="err">${esc(S.cfgErr)}</div>`:""}</div>
+ ${S.busy?`<div class="card big">⏳<p style="text-align:center">Processing payment…</p></div>`:`<button class="btn" style="font-size:18px;padding:18px" onclick="pay(true)">PAY WITH PAYSTACK (TEST)</button><button class="btn alt" onclick="S.step=1;render()">EDIT DETAILS</button>
+ <h2>Other test options</h2><p>Only use these to test failed or pending orders.</p><button class="btn bad" onclick="confirmFail()">SIMULATE FAILED PAYMENT</button><button class="btn alt" onclick="savePending()">PAY LATER</button>`}`},
+confirm:id=>{const o=DB.get(id);if(!o)return`<div class="card">Order not found.</div>`;const ok=isPaid(o.payment_status)&&o.data_delivery_status==="Sent (Demo)";
+ return`<div class="big">${ok?"✅":o.payment_status==="Failed"?"❌":"⏳"}</div><h1 style="text-align:center">${ok?"Order successful (TEST)":o.payment_status==="Failed"?"Payment failed":isPaid(o.payment_status)?"Paid — delivering data":"Payment pending"}</h1>${o.verify_error?`<div class="err">${esc(o.verify_error)}</div>`:""}${o.status_note?`<p style="text-align:center">${esc(o.status_note)}</p>`:""}${orderCard(o)}
+ ${o.payment_status==="Pending"?(S.checking?`<div class="card big">⏳<p style="text-align:center">Checking with Paystack…</p></div>`:`<button class="btn" onclick="recheck('${o.order_id}')">CHECK PAYMENT STATUS</button><button class="btn alt" onclick="payExisting('${o.order_id}')">PAY NOW (TEST)</button>`):""}
+ <h2>Activity log (Paystack verification + mock n8n/VTU)</h2><pre>${esc((o.log||["No automation run yet."]).join("\n"))}</pre><a class="btn" href="#/plans" onclick="S.plan=null">BUY DATA</a><a class="btn alt" href="#/history">CHECK ORDER STATUS</a>`},
+history:()=>{const l=DB.all();return`<h1>Order History</h1><label>Check order status by Order ID</label><input id="oid" placeholder="DFNG-XXXXXX" style="text-transform:uppercase">
+ <button class="btn" onclick="findOrder()">CHECK ORDER STATUS</button>
+ ${S.found===null?`<div class="err">No order found with that ID.</div>`:S.found?orderCard(S.found):""}
+ <h2>Your orders on this device</h2>${l.length?l.map(o=>`<a href="#/confirm/${o.order_id}" style="text-decoration:none;color:inherit"><div class="card"><div class="row"><b>${o.order_id}</b>${tag(o.data_delivery_status)}</div><p>${o.network} ${o.data_plan} · ${naira(o.amount)} · ${when(o.created_at)}</p></div></a>`).join(""):`<p>No orders yet.</p>`}`},
+admin:()=>{const l=DB.all(),ok=l.filter(o=>isPaid(o.payment_status)&&o.data_delivery_status==="Sent (Demo)").length,fl=l.filter(o=>o.payment_status==="Failed"||o.data_delivery_status==="Failed").length;
+ return`<h1>Admin Dashboard</h1><p>Shows orders saved on this device only. Payment status is confirmed by Paystack (test mode).</p>
+ <div class="stats"><div class="stat"><span>Total orders</span><b>${l.length}</b></div><div class="stat"><span>Successful</span><b style="color:var(--pr)">${ok}</b></div><div class="stat"><span>Pending</span><b style="color:var(--wa)">${l.length-ok-fl}</b></div><div class="stat"><span>Failed</span><b style="color:var(--er)">${fl}</b></div></div>
+ <h2>All orders</h2><div class="wrap card"><table><tr><th>Order ID</th><th>Customer</th><th>Phone</th><th>Network</th><th>Plan</th><th>Amount</th><th>Payment</th><th>Delivery</th><th>Date</th></tr>
+ ${l.map(o=>`<tr><td>${o.order_id}</td><td>${esc(o.customer_name)}</td><td>${esc(o.phone_number)}</td><td>${o.network}</td><td>${o.data_plan}</td><td>${naira(o.amount)}</td><td>${tag(o.payment_status)}</td><td>${tag(o.data_delivery_status)}</td><td>${when(o.created_at)}</td></tr>`).join("")||`<tr><td colspan="9">No orders yet.</td></tr>`}</table></div>
+ <button class="btn alt" onclick="seed()">ADD SAMPLE ORDERS</button><button class="btn bad" onclick="if(confirm('Delete all demo orders?')){DB.save([]);render()}">RESET DEMO DATA</button>`},
+about:()=>`<h1>About DataFlow NG</h1><p>DataFlow NG is a demo of an automated data-selling app for Nigeria: choose a network, pick a bundle, pay, and receive data automatically.</p>
+<div class="card"><b>Demo status</b><p>Payments and data delivery are simulated. Real payment and VTU providers will be connected later through a secure server and n8n.</p></div>`,
+contact:()=>`<h1>Contact</h1><div class="card"><div class="row"><span>Support (demo)</span><b>support@dataflowng.example</b></div><div class="row"><span>WhatsApp (demo)</span><b>0800 000 0000</b></div><div class="row"><span>Hours</span><b>8am – 8pm daily</b></div></div><p>These contact details are placeholders.</p>`
+};
+function orderCard(o){return`<div class="card"><div class="row"><span>Order ID</span><b>${o.order_id}</b></div><div class="row"><span>Customer</span><b>${esc(o.customer_name)}</b></div><div class="row"><span>Phone</span><b>${esc(o.phone_number)}</b></div><div class="row"><span>Network</span><b>${o.network}</b></div><div class="row"><span>Data plan</span><b>${o.data_plan}</b></div><div class="row"><span>Amount</span><b>${naira(o.amount)}</b></div><div class="row"><span>Payment</span>${tag(o.payment_status)}</div><div class="row"><span>Data delivery</span>${tag(o.data_delivery_status)}</div><div class="row"><span>Date/time</span><b>${when(o.created_at)}</b></div></div>`}
+
+/* ============ 6. ACTIONS ============ */
+function toReview(){S.name=$("#nm").value.trim();S.phone=$("#ph").value.trim();
+ if(S.name.length<2)S.err="Please enter your name.";else if(!validPhone(S.phone))S.err="Enter a valid 11-digit Nigerian number, e.g. 08012345678.";else{S.err="";S.step=2}render();window.scrollTo(0,0)}
+function newOrder(){return{order_id:"DFNG-"+Math.random().toString(36).slice(2,8).toUpperCase(),customer_name:S.name,phone_number:S.phone,network:S.net,data_plan:S.plan,amount:PRICES[S.net][S.plan],payment_status:"Pending",data_delivery_status:"Not sent",created_at:new Date().toISOString(),log:[]}}
+function confirmFail(){if(confirm("Simulate a FAILED payment? This is only a test."))pay(false)}
+function savePending(){const o=newOrder();DB.upsert(o);go("#/confirm/"+o.order_id)}
+function openPaystack(o){return new Promise((resolve,reject)=>{
+ if(!PK)return reject(new Error(S.cfgErr||"Payment settings are not loaded. Refresh the page and try again."));
+ if(typeof PaystackPop==="undefined")return reject(new Error("Could not load Paystack checkout. Check your internet connection and try again."));
+ try{new PaystackPop().newTransaction({key:PK,email:o.phone_number+"@customer.dataflowng.com",amount:o.amount*100,currency:"NGN",ref:o.paystack_reference,reference:o.paystack_reference,
+  metadata:{order_id:o.order_id,network:o.network,plan:o.data_plan,customer:o.customer_name,phone:o.phone_number},
+  onSuccess:t=>resolve({result:"success",reference:(t&&t.reference)||o.paystack_reference}),
+  onCancel:()=>resolve({result:"closed"}),
+  onError:e=>reject(new Error((e&&e.message)||"Paystack could not start the payment."))})}
+ catch(e){reject(new Error("Paystack could not start the payment: "+(e.message||e)))}})}
+// Asks OUR server to verify with Paystack (secret key stays on the server). Only "Paid" from the server marks an order paid.
+async function verifyOrder(o){const prev=o.log||[];
+ try{const r=await fetch("/api/verify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({reference:o.paystack_reference||o.order_id,network:o.network,plan:o.data_plan})});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(j.error||"Payment verification failed (error "+r.status+"). Order kept as Pending.");
+  o.verify_error="";o.status_note=j.message||"";
+  prev.push(new Date().toLocaleTimeString()+" Paystack check: "+j.payment_status+(j.paystack_status?" ("+j.paystack_status+")":""));o.log=prev;
+  if(j.payment_status==="Paid"&&!isPaid(o.payment_status)){o.payment_status="Paid";o.data_delivery_status="Pending";DB.upsert(o);await mockN8nWorkflow(o);o.log=prev.concat(o.log)}
+  else if(j.payment_status==="Failed"&&!isPaid(o.payment_status)){o.payment_status="Failed";o.data_delivery_status="Not sent"}
+ }catch(e){o.log=prev;o.verify_error=e.message==="Failed to fetch"?"Could not reach the server to verify payment. Check your internet and tap CHECK PAYMENT STATUS. Order kept as Pending.":e.message}
+ DB.upsert(o)}
+async function startPayment(o){S.busy=true;S.err="";render();
+ o.paystack_reference=o.order_id+"-"+refCode();o.verify_error="";DB.upsert(o);
+ try{const p=await openPaystack(o);if(p.result==="success")o.paystack_reference=p.reference||o.paystack_reference;
+  if(p.result==="success")await verifyOrder(o);
+  else{o.status_note="Payment window was closed. Order saved as Pending.";o.log.push("Payment window closed before completion.");DB.upsert(o)}
+ }catch(e){o.verify_error=e.message;o.log.push("Could not start payment: "+e.message);DB.upsert(o)}
+ S.busy=false;S.plan=null;go("#/confirm/"+o.order_id);render()}
+async function pay(ok){if(S.busy)return;const o=newOrder();
+ if(ok)return startPayment(o);
+ S.busy=true;render();await sleep(600);o.payment_status="Failed";o.log=["Simulated failed payment (test option) — no data sent."];DB.upsert(o);
+ S.busy=false;S.plan=null;go("#/confirm/"+o.order_id)}
+async function payExisting(id){if(S.busy)return;const o=DB.get(id);if(o&&o.payment_status==="Pending")startPayment(o)}
+async function recheck(id){if(S.checking)return;const o=DB.get(id);if(!o)return;S.checking=true;render();await verifyOrder(o);S.checking=false;render()}
+function findOrder(){const v=$("#oid").value.trim().toUpperCase();S.found=DB.get(v)||null;render()}
+function seed(){const s=[["Ada Obi","08031112222","MTN","1GB","Paid (Demo)","Sent (Demo)"],["Musa Bello","09044443333","Airtel","5GB","Paid (Demo)","Pending"],["Tola Ade","07055554444","Glo","2GB","Failed","Not sent"]];
+ s.forEach((r,i)=>DB.upsert({order_id:"DFNG-SAMPL"+i,customer_name:r[0],phone_number:r[1],network:r[2],data_plan:r[3],amount:PRICES[r[2]][r[3]],payment_status:r[4],data_delivery_status:r[5],created_at:new Date(Date.now()-i*3600e3).toISOString(),log:[]}));render()}
+
+/* ============ 7. ROUTER ============ */
+const NAV=[["home","Home"],["plans","Data Plans"],["history","Orders"],["admin","Admin"],["about","About"],["contact","Contact"]];
+function render(){const h=(location.hash||"#/").slice(2).split("/"),r=h[0]||"home";
+ $("#nav").innerHTML=NAV.map(([k,t])=>`<a href="#/${k==="home"?"":k}" class="${(k===r||(r==="checkout"&&k==="plans")||(r==="confirm"&&k==="history"))?"on":""}">${t}</a>`).join("");
+ $("#app").innerHTML=(pages[r]||pages.home)(h[1])}
+window.onhashchange=()=>{S.err="";S.found=undefined;render()};render();loadConfig();
+</script></body></html>
